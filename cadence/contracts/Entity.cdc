@@ -120,7 +120,7 @@ pub contract Entity: NonFungibleToken {
                 // 只收集唯一的 bytes      
                 let hex = String.encodeHex(feature.bytes)      
                 if self.features.containsKey(hex) == false {                
-                    let nft <- create NFT(id: EntityNFT.totalSupply, feature: feature)        
+                    let nft <- create NFT(id:EntityNFT.totalSupply, feature: feature)        
                     self.features[hex] = feature        
                     EntityNFT.totalSupply = EntityNFT.totalSupply + UInt64(1)        
                     emit ElementGenerateSuccess(hex: hex)        
@@ -156,6 +156,7 @@ pub contract Entity: NonFungibleToken {
             <- self.createEmptyCollection(),      
             to: /storage/LocalEntityCollection    
         )    
+        
         self.account.link<&EntityNFT.Collection>(      
             /public/LocalEntityCollection,      
             target: /storage/LocalEntityCollection    
