@@ -1,7 +1,7 @@
 import NonFungibleToken from "./standard/NonFungibleToken.cdc"
 import MetadataViews from "./standard/MetadataViews.cdc"
 pub contract Entity: NonFungibleToken { 
-     pub var totalSupply: UInt64  
+    pub var totalSupply: UInt64  
 
     pub event ContractInitialized() 
 
@@ -37,65 +37,65 @@ pub contract Entity: NonFungibleToken {
         }
     
         pub fun resolveView(_ view: Type): AnyStruct? {
-        switch view {
-               case Type<MetaFeature>():
-               return self.feature
+            switch view {
+                    case Type<MetaFeature>():
+                    return self.feature
             }  
-             return nil 
-            }
+            return nil 
+        }
+    }
+
+
+    pub resource interface ExampleProvider {
+        pub fun withdrawByHex(hex: String): @NFT {
+            post {
+                    String.encodeHex(result.feature.bytes) == hex: "The hex of the withdrawn token must be the same as the requested hex"  
+                }
+        }  
+    }
+
+    pub resource Collection : ExampleProvider, NonFungibleToken.Provider, NonFungibleToken.Receiver, NonFungibleToken.CollectionPublic, MetadataViews.ResolverCollection {
+        pub var ownedNFTs: @{UInt64: NonFungibleToken.NFT}    
+        pub var hex2id: {String: UInt64}    
+        pub fun withdraw(withdrawID: UInt64): @NonFungibleToken.NFT {
+            let token <- self.ownedNFTs.remove(key: withdrawID) ?? panic("NFT does not exist in the collection!")      
+            emit Withdraw(id: withdrawID, from: self.owner?.address!)      
+                return <- token    
+       }    
+
+        pub fun withdrawByHex(hex: String): @NonFungibleToken.NFT { 
+            let id = self.hex2id[hex]?? panic("no resource")      
+            return <- (self.ownedNFTs.remove(key: id) as! @NonFungibleToken.NFT)    
         }
 
-        pub resource interface ExampleProvider {
-            pub fun withdrawByHex(hex: String): @NFT {
-                post {
-                       String.encodeHex(result.feature.bytes) == hex: "The hex of the withdrawn token must be the same as the requested hex"  
-                     }
-            }  
-        }
-
-        pub resource Collection : ExampleProvider, NonFungibleToken.Provider, NonFungibleToken.Receiver, NonFungibleToken.CollectionPublic, MetadataViews.ResolverCollection {
-            pub var ownedNFTs: @{UInt64: NonFungibleToken.NFT}    
-            pub var hex2id: {String: UInt64}    
-            pub fun withdraw(withdrawID: UInt64): @NonFungibleToken.NFT {
-                let token <- self.ownedNFTs.remove(key: withdrawID) ?? panic("NFT does not exist in the collection!")      
-                emit Withdraw(id: withdrawID, from: self.owner?.address!)      
-                   return <- token    
-            }    
-
-            pub fun withdrawByHex(hex: String): @NonFungibleToken.NFT { 
-                let id = self.hex2id[hex]?? panic("no resource")      
-                return <- (self.ownedNFTs.remove(key: id) as! @NonFungibleToken.NFT)    
-            }
-
-             pub fun deposit(token: @NonFungibleToken.NFT) {
-                 let element <- token as! @NFT      
-                 let hex = String.encodeHex(element.feature.bytes)      
-                 self.hex2id[hex] = element.id      
-                 let oldtoken <- self.ownedNFTs[element.id] <- (element as! @NonFungibleToken.NFT)      
-                 emit ElementDeposit(id: element.id, hex: hex)      
-                 destroy old   
-            }    
-            
-            pub fun getIDs(): [UInt64] {      
-                return self.ownedNFTs.keys    
-            }    
-            
-            pub fun borrowNFT(id: UInt64): &NonFungibleToken.NFT {      
-                return &self.ownedNFTs[id] as &NonFungibleToken.NFT    
-            }
-
-            pub fun borrowViewResolver(id: UInt64): &AnyResource{MetadataViews.Resolver} {
-                let nft = &self.ownedNFTs[id] as auth &NonFungibleToken.NFT        
-                let element  = nft as! &EntityNFT.NFT        
-                return element as &AnyResource{MetadataViews.Resolver
-            }     
-                
-        } 
-                   
-        init() {            
-            self.ownedNFTs <- {}    
+        pub fun deposit(token: @NonFungibleToken.NFT) {
+            let element <- token as! @NFT      
+            let hex = String.encodeHex(element.feature.bytes)      
+            self.hex2id[hex] = element.id      
+            let oldtoken <- self.ownedNFTs[element.id] <- (element as! @NonFungibleToken.NFT)      
+            emit ElementDeposit(id: element.id, hex: hex)      
+            destroy old   
         }    
         
+        pub fun getIDs(): [UInt64] {      
+            return self.ownedNFTs.keys    
+        }    
+        
+        pub fun borrowNFT(id: UInt64): &NonFungibleToken.NFT {      
+            return &self.ownedNFTs[id] as &NonFungibleToken.NFT    
+        }
+
+        pub fun borrowViewResolver(id: UInt64): &AnyResource{MetadataViews.Resolver} {
+            let nft = &self.ownedNFTs[id] as auth &NonFungibleToken.NFT        
+            let element  = nft as! &EntityNFT.NFT        
+            return element as &AnyResource{MetadataViews.Resolver}
+        }     
+                
+                
+        init() {            
+        self.ownedNFTs <- {}    
+        }    
+
         destroy() { 
             destroy self.ownedNFTs    
         }  
@@ -117,18 +117,18 @@ pub contract Entity: NonFungibleToken {
         pub fun generate(        
             receiver: &{NonFungibleToken.CollectionPublic},        
             feature: MetaFeature) {      
-                // 只收集唯一的 bytes      
-                let hex = String.encodeHex(feature.bytes)      
-                if self.features.containsKey(hex) == false {                
-                    let nft <- create NFT(id:EntityNFT.totalSupply, feature: feature)        
-                    self.features[hex] = feature        
-                    EntityNFT.totalSupply = EntityNFT.totalSupply + UInt64(1)        
-                    emit ElementGenerateSuccess(hex: hex)        
-                    receiver.deposit(token: <-nft)       
-                } else {        
-                    emit ElementGenerateFailure(hex: hex)      
-                }    
-            }  
+            // 只收集唯一的 bytes      
+            let hex = String.encodeHex(feature.bytes)      
+            if self.features.containsKey(hex) == false {                
+                let nft <- create NFT(id:EntityNFT.totalSupply, feature: feature)        
+                self.features[hex] = feature        
+                EntityNFT.totalSupply = EntityNFT.totalSupply + UInt64(1)        
+                emit ElementGenerateSuccess(hex: hex)        
+                receiver.deposit(token: <-nft)       
+            } else {        
+                emit ElementGenerateFailure(hex: hex)      
+            }    
+        }  
     }
 
     init() {    
